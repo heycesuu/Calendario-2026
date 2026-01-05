@@ -1,252 +1,594 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Calendário de Feriados e Jogos</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Calendário de Feriados e Jogos</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#121826; --txt:#e6eefc; --muted:#9fb0c8; --line:#22314a;
+      --header:#0f2d6f; --header2:#1b4db0;
+      --cell:#0e1522; --cell2:#0c1220;
+      --feriado:#ff6b6b; --ponto:#ffd166; --emenda:#b388ff; --jogo:#4dd6ff;
+      --chipbg:#0a0f1c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
+    header{max-width:1100px;margin:0 auto;padding:20px 16px 10px}
+    h1{margin:0 0 6px;font-size:28px}
+    p{margin:6px 0;color:var(--muted);line-height:1.45}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 16px 26px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.08);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.35)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px}
+    .group{display:flex;gap:8px;align-items:center}
+    button,.pill,select,label.chk{
+      background:rgba(255,255,255,0.04);
+      color:var(--txt);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:999px;
+      padding:10px 12px;
+      font-weight:600;
+      cursor:pointer;
+      user-select:none;
+    }
+    button:hover,.pill:hover{background:rgba(255,255,255,0.07)}
+    button:active{transform:translateY(1px)}
+    select{padding:10px 14px;}
+    .pill.active{background:rgba(77,214,255,0.12);border-color:rgba(77,214,255,0.35)}
+    .spacer{flex:1}
+    .legend{display:flex;gap:14px;align-items:center;font-weight:600;color:var(--muted)}
+    .dot{width:10px;height:10px;border-radius:99px;display:inline-block;margin-right:6px}
+    .dot.feriado{background:var(--feriado)}
+    .dot.ponto{background:var(--ponto)}
+    .dot.emenda{background:var(--emenda)}
+    .dot.jogo{background:var(--jogo)}
 
-<style>
-:root{
-  --bg:#0b0f14;
-  --card:#121826;
-  --txt:#e6eefc;
-  --muted:#9fb0c8;
-  --line:#22314a;
+    .status{margin:0 14px 14px;padding:10px 12px;border-radius:14px;border:1px dashed rgba(255,255,255,0.14);color:var(--muted)}
+    .status.warn{border-color:rgba(255,209,102,0.45);color:#ffd166}
+    .hint{padding:0 14px 14px;color:var(--muted);font-size:14px}
+    .counter{margin-left:auto;padding:10px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.03);color:var(--txt);font-weight:700;display:flex;gap:10px;align-items:center}
+    .counter small{color:var(--muted);font-weight:700}
+    label.chk{display:flex;align-items:center;gap:8px;padding:10px 14px}
+    label.chk input{accent-color:var(--jogo)}
 
-  --feriado:#ff6b6b;
-  --ponto:#ffd166;
-  --emenda:#b388ff;
-  --jogo:#4dd6ff;
-}
+    .calendar{margin:0 14px 16px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)}
+    .cal-head{background:linear-gradient(90deg, var(--header), var(--header2));padding:18px 18px;text-align:center;font-size:42px;font-weight:900;letter-spacing:.5px}
+    .week{display:grid;grid-template-columns:repeat(7,1fr);background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.06)}
+    .week div{padding:14px 10px;text-align:center;font-weight:800;font-size:22px}
+    .days{display:grid;grid-template-columns:repeat(7,1fr);background:rgba(0,0,0,0.12)}
+    .day{min-height:92px;padding:10px;border-top:1px solid rgba(255,255,255,0.06);border-right:1px solid rgba(255,255,255,0.06);position:relative;background:linear-gradient(180deg, var(--cell), var(--cell2))}
+    .day:nth-child(7n){border-right:none}
+    .day .num{font-weight:900;color:rgba(255,255,255,0.90);font-size:18px}
+    .day.muted{opacity:.35}
+    .chips{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+    .chip{display:block;padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(10,15,28,0.65);font-weight:800;line-height:1.15}
+    .chip .t{display:block;font-size:12px;color:var(--muted);font-weight:900}
+    .chip.feriado{border-left:4px solid var(--feriado)}
+    .chip.ponto{border-left:4px solid var(--ponto)}
+    .chip.emenda{border-left:4px solid var(--emenda)}
+    .chip.jogo{border-left:4px solid var(--jogo)}
 
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-  background:var(--bg);
-  color:var(--txt);
-}
+    /* Destaques de jogos */
+    .day.has-game{outline:2px solid rgba(77,214,255,0.65); outline-offset:-2px; box-shadow: inset 0 0 0 1px rgba(77,214,255,0.15);}
+    .day.has-game::after{content:"⚽"; position:absolute; right:10px; top:10px; font-size:16px; opacity:.95;}
+    .day.is-next{outline:3px solid rgba(255,209,102,0.85); outline-offset:-3px;}
+    .day.is-next::after{content:"⏳";}
 
-header{
-  max-width:1100px;
-  margin:auto;
-  padding:20px 16px;
-}
+    /* Modal */
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;padding:18px}
+    .modal{width:min(720px, 96vw);background:rgba(16,22,35,0.98);border:1px solid rgba(255,255,255,0.10);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.55)}
+    .modal h2{margin:0;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:18px}
+    .modal .content{padding:14px 18px}
+    .modal .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .modal .close{border-radius:12px;padding:10px 12px}
+    .list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+    .item{padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)}
+    .item strong{display:block}
+    .item small{color:var(--muted)}
 
-h1{margin:0 0 6px;font-size:22px}
-p{margin:0;color:var(--muted)}
-
-.wrap{
-  max-width:1100px;
-  margin:auto;
-  padding:16px;
-}
-
-.toolbar{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-bottom:12px;
-}
-
-button{
-  background:#0f2d6f;
-  color:white;
-  border:0;
-  padding:8px 12px;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-.counter{
-  margin-left:auto;
-  background:#0e1625;
-  padding:8px 12px;
-  border-radius:10px;
-  border:1px solid var(--line);
-}
-
-.calendar{
-  border-radius:14px;
-  overflow:hidden;
-  border:1px solid var(--line);
-}
-
-.cal-head{
-  background:#113a8f;
-  padding:14px;
-  text-align:center;
-  font-size:26px;
-  font-weight:700;
-}
-
-.week{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  background:#0e1625;
-}
-
-.week div{
-  padding:10px;
-  text-align:center;
-  font-weight:600;
-  border-right:1px solid var(--line);
-}
-
-.days{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-}
-
-.day{
-  min-height:110px;
-  padding:8px;
-  border-right:1px solid var(--line);
-  border-top:1px solid var(--line);
-  position:relative;
-}
-
-.day strong{
-  font-size:14px;
-}
-
-.event{
-  margin-top:6px;
-  padding:6px 8px;
-  border-radius:10px;
-  font-size:13px;
-  border-left:4px solid;
-}
-
-.feriado{border-color:var(--feriado)}
-.ponto{border-color:var(--ponto)}
-.emenda{border-color:var(--emenda)}
-.jogo{border-color:var(--jogo);background:#0b2230}
-
-.jogo-day{
-  outline:2px solid var(--jogo);
-  outline-offset:-2px;
-}
-</style>
+    @media (max-width:720px){
+      .cal-head{font-size:30px}
+      .week div{font-size:16px}
+      .day{min-height:84px}
+      h1{font-size:24px}
+      .counter{width:100%;justify-content:center}
+    }
+  </style>
 </head>
-
 <body>
-
 <header>
-  <h1>Calendário de Feriados e Jogos</h1>
-  <p>Feriados + Jogos do Brasil (fixos)</p>
+  <h1>🗓️ Calendário de Feriados e Jogos</h1>
+  <p>Um calendário só (offline, arquivo único). <b>Feriados</b> já vêm prontos. Os <b>jogos do Brasil</b> já vêm pré-fixados (junho/julho). Se quiser, você ainda pode <b>importar um .ICS</b> para adicionar outros jogos.</p>
 </header>
 
 <div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <div class="group">
+        <button id="prev" title="Mês anterior">←</button>
+        <select id="month"></select>
+        <select id="year"></select>
+        <button id="next" title="Próximo mês">→</button>
+        <button id="today">Ir para o mês atual</button>
+      </div>
 
-<div class="toolbar">
-  <button id="prev">◀</button>
-  <button id="next">▶</button>
+      <div class="spacer"></div>
 
-  <div class="counter" id="contador">⏳ Próximo jogo: —</div>
-</div>
+      <div class="legend" aria-label="Legenda">
+        <span><i class="dot feriado"></i>Feriado</span>
+        <span><i class="dot ponto"></i>Ponto facultativo</span>
+        <span><i class="dot emenda"></i>Emenda</span>
+        <span><i class="dot jogo"></i>Jogo</span>
+      </div>
+    </div>
 
-<div class="calendar">
-  <div class="cal-head" id="mesTitulo"></div>
+    <div class="toolbar" style="padding-top:0">
+      <div class="group">
+        <button id="importBtn">Importar jogos (.ICS)</button>
+        <input id="icsFile" type="file" accept=".ics,text/calendar" style="display:none"/>
 
-  <div class="week">
-    <div>domingo</div><div>segunda</div><div>terça</div>
-    <div>quarta</div><div>quinta</div><div>sexta</div><div>sábado</div>
+        <button class="pill active" id="tabAll">Tudo</button>
+        <button class="pill" id="tabGames">Jogos</button>
+        <button class="pill" id="tabHolidays">Feriados</button>
+
+        <label class="chk" title="Mostrar só jogos com Brasil/Brazil no nome">
+          <input type="checkbox" id="onlyBrazil" checked />
+          Só Brasil
+        </label>
+      </div>
+
+      <div class="counter" id="contador">
+        <small>⏳ Próximo jogo:</small>
+        <span id="contadorTxt">—</span>
+      </div>
+    </div>
+
+    <div id="fileStatus" class="status">Nenhum .ICS importado ainda</div>
+    <div class="hint">Horário: se o .ics vier em UTC (Z), converto para <b>Brasília (UTC−3)</b>. Jogos do Brasil já vêm cadastrados (junho/julho).</div>
+
+    <div class="calendar">
+      <div class="cal-head" id="monthTitle"></div>
+      <div class="week">
+        <div>domingo</div><div>segunda-feira</div><div>terça-feira</div><div>quarta-feira</div><div>quinta-feira</div><div>sexta-feira</div><div>sábado</div>
+      </div>
+      <div class="days" id="calendarGrid"></div>
+    </div>
+
+    <div class="hint">Dica: dá pra adicionar feriados estaduais/municipais depois se você quiser.</div>
   </div>
-
-  <div class="days" id="dias"></div>
 </div>
 
+<!-- Modal -->
+<div class="backdrop" id="modalBack">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">Detalhes</h2>
+    <div class="content">
+      <div class="row">
+        <div style="color:var(--muted);font-weight:700" id="modalSub"></div>
+        <button class="close" id="modalClose">Fechar</button>
+      </div>
+      <div class="list" id="modalList"></div>
+    </div>
+  </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded",()=>{
+(() => {
+  // ==== Guard rails: nunca deixar o site "morrer" por erro de JS ====
+  const statusEl = document.getElementById("fileStatus");
+  function warn(msg) {
+    if(!statusEl) return;
+    statusEl.classList.add("warn");
+    statusEl.textContent = "⚠️ " + msg;
+  }
+  window.addEventListener("error", (e) => {
+    warn("Erro no script: " + (e && e.message ? e.message : "ver console"));
+  });
 
-const jogos = [
-  {data:"2026-06-13T18:00", titulo:"Brazil x Morocco"},
-  {data:"2026-06-19T21:00", titulo:"Brazil x Haiti"}
-];
-
-let dataAtual = new Date(2026,5,1);
-
-const diasEl = document.getElementById("dias");
-const tituloEl = document.getElementById("mesTitulo");
-const contadorEl = document.getElementById("contador");
-
-function render(){
-  diasEl.innerHTML="";
-  const ano = dataAtual.getFullYear();
-  const mes = dataAtual.getMonth();
-
-  tituloEl.textContent =
-    dataAtual.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
-
-  const primeiroDia = new Date(ano,mes,1).getDay();
-  const totalDias = new Date(ano,mes+1,0).getDate();
-
-  for(let i=0;i<primeiroDia;i++){
-    diasEl.appendChild(document.createElement("div"));
+  // Helper seguro para eventos
+  function on(id, ev, fn) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener(ev, fn);
   }
 
-  for(let d=1;d<=totalDias;d++){
-    const cell = document.createElement("div");
-    cell.className="day";
-    cell.innerHTML=`<strong>${d}</strong>`;
+  // ==== Dados (feriados/pontos) ====
+  const eventos = [
+    { date:"2026-01-01", name:"Confraternização Universal", type:"feriado" },
+    { date:"2026-02-16", name:"Carnaval", type:"ponto" },
+    { date:"2026-02-17", name:"Carnaval", type:"ponto" },
+    { date:"2026-02-18", name:"Quarta-feira de Cinzas", type:"ponto" },
+    { date:"2026-04-03", name:"Paixão de Cristo", type:"feriado" },
+    { date:"2026-04-21", name:"Tiradentes", type:"feriado" },
+    { date:"2026-05-01", name:"Dia do Trabalho", type:"feriado" },
+    { date:"2026-06-04", name:"Corpus Christi", type:"ponto" },
+    { date:"2026-06-05", name:"Ponto facultativo", type:"ponto" },
+    { date:"2026-09-07", name:"Independência do Brasil", type:"feriado" },
+    { date:"2026-10-12", name:"Nossa Senhora Aparecida", type:"feriado" },
+    { date:"2026-10-28", name:"Dia do Servidor Público", type:"ponto" },
+    { date:"2026-11-02", name:"Finados", type:"feriado" },
+    { date:"2026-11-15", name:"Proclamação da República", type:"feriado" },
+    { date:"2026-11-20", name:"Consciência Negra", type:"feriado" },
+    { date:"2026-12-24", name:"Véspera de Natal", type:"ponto" },
+    { date:"2026-12-25", name:"Natal", type:"feriado" },
+    { date:"2026-12-31", name:"Véspera de Ano Novo", type:"ponto" },
+  ];
 
-    const dataStr =
-      `${ano}-${String(mes+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  // Emendas (se quiser no futuro, só colocar itens aqui)
+  const emendas = [];
 
-    jogos.forEach(j=>{
-      if(j.data.startsWith(dataStr)){
-        cell.classList.add("jogo-day");
-        cell.innerHTML +=
-          `<div class="event jogo">⚽ ${j.titulo} ${j.data.slice(11,16)}</div>`;
-      }
+  // ==== Jogos pré-fixados (Brasil) ====
+  const fixedGames = [
+    { dateISO:"2026-06-13", label:"Brazil x Morocco", timeHHMM:"18:00", rawSummary:"Brazil x Morocco" },
+    { dateISO:"2026-06-19", label:"Brazil x Haiti", timeHHMM:"21:00", rawSummary:"Brazil x Haiti" },
+    { dateISO:"2026-06-24", label:"Brazil x Spain", timeHHMM:"16:00", rawSummary:"Brazil x Spain" },
+  ];
+
+  // Jogos importados (se houver) + fixos
+  let importedGames = fixedGames.slice();
+
+  // ===== Utils =====
+  const monthSel = document.getElementById("month");
+  const yearSel  = document.getElementById("year");
+  const titleEl  = document.getElementById("monthTitle");
+  const gridEl   = document.getElementById("calendarGrid");
+  const onlyBrazilEl = document.getElementById("onlyBrazil");
+  const contadorTxt = document.getElementById("contadorTxt");
+
+  const MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function isoDate(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+  function fmtTitle(y,m){ return `${MONTHS[m]} de ${y}`; }
+
+  function chipClass(t){ return t==="feriado"?"feriado":(t==="ponto"?"ponto":(t==="emenda"?"emenda":"jogo")); }
+  function chipTitle(t){ return t==="feriado"?"Feriado":(t==="ponto"?"Ponto facultativo":(t==="emenda"?"Emenda":"Jogo")); }
+
+  // ===== Mapa por dia =====
+  function buildDayMap() {
+    const byDay = new Map();
+    const base = [...eventos, ...emendas];
+
+    for(const e of base) {
+      if(!byDay.has(e.date)) byDay.set(e.date, []);
+      byDay.get(e.date).push({date:e.date, name:e.name, type:e.type});
+    }
+
+    const onlyBrazil = !!(onlyBrazilEl && onlyBrazilEl.checked);
+    const list = importedGames.filter(g => {
+      if(!onlyBrazil) return true;
+      const s = (g.rawSummary||"").toLowerCase();
+      return s.includes("brazil") || s.includes("brasil");
     });
 
-    diasEl.appendChild(cell);
+    for(const g of list) {
+      if(!byDay.has(g.dateISO)) byDay.set(g.dateISO, []);
+      byDay.get(g.dateISO).push({
+        date: g.dateISO,
+        name: `${g.label}${g.timeHHMM ? " " + g.timeHHMM : ""}`,
+        type: "jogo",
+        __game: g
+      });
+    }
+
+    const order = {feriado:0, ponto:1, emenda:2, jogo:3};
+    for(const [k,arr] of byDay.entries()) {
+      arr.sort((a,b)=>(order[a.type]??9)-(order[b.type]??9));
+    }
+
+    return byDay;
   }
-}
 
-function atualizarContador(){
-  const agora = new Date();
-  const proximos = jogos
-    .map(j=>({...j,dt:new Date(j.data)}))
-    .filter(j=>j.dt>agora)
-    .sort((a,b)=>a.dt-b.dt);
+  // ===== Modal =====
+  const modalBack = document.getElementById("modalBack");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalSub = document.getElementById("modalSub");
+  const modalList = document.getElementById("modalList");
 
-  if(!proximos.length){
-    contadorEl.textContent="⏳ Nenhum jogo futuro";
-    return;
+  function openModal(iso, events) {
+    if(!modalBack) return;
+    modalTitle.textContent = "Detalhes do dia";
+    modalSub.textContent = iso;
+    modalList.innerHTML = "";
+    if(!events || !events.length) {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = "<strong>Nada por aqui</strong><small>Sem eventos neste dia.</small>";
+      modalList.appendChild(div);
+    } else {
+      for(const ev of events) {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `<strong>${chipTitle(ev.type)}:</strong><div style="margin-top:4px;font-weight:800">${ev.name}</div>`;
+        modalList.appendChild(div);
+      }
+    }
+    modalBack.style.display = "flex";
+  }
+  function closeModal() {
+    if(modalBack) modalBack.style.display = "none";
+  }
+  on("modalClose","click",closeModal);
+  on("modalBack","click",(e)=>{ if(e.target===modalBack) closeModal(); });
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeModal(); });
+
+  // ===== Tabs (Tudo / Jogos / Feriados) =====
+  let viewMode = "all"; // all | games | holidays
+  function setView(mode) {
+    viewMode = mode;
+    document.getElementById("tabAll")?.classList.toggle("active", mode==="all");
+    document.getElementById("tabGames")?.classList.toggle("active", mode==="games");
+    document.getElementById("tabHolidays")?.classList.toggle("active", mode==="holidays");
+    repaint();
+  }
+  on("tabAll","click",()=>setView("all"));
+  on("tabGames","click",()=>setView("games"));
+  on("tabHolidays","click",()=>setView("holidays"));
+  if(onlyBrazilEl) onlyBrazilEl.addEventListener("change", repaint);
+
+  function filterByView(events) {
+    if(viewMode==="all") return events;
+    if(viewMode==="games") return events.filter(e=>e.type==="jogo");
+    return events.filter(e=>e.type!=="jogo");
   }
 
-  const alvo = proximos[0].dt;
-  const diff = alvo - agora;
+  // ===== Countdown / Próximo jogo =====
+  function parseGameToDate(g) {
+    const time = g.timeHHMM || "00:00";
+    return new Date(`${g.dateISO}T${time}:00-03:00`);
+  }
+  function getNextGame() {
+    const now = new Date();
+    const onlyBrazil = !!(onlyBrazilEl && onlyBrazilEl.checked);
+    const list = importedGames.filter(g => {
+      if(!onlyBrazil) return true;
+      const s = (g.rawSummary||"").toLowerCase();
+      return s.includes("brazil") || s.includes("brasil");
+    });
 
-  const d = Math.floor(diff/86400000);
-  const h = Math.floor(diff/3600000)%24;
-  const m = Math.floor(diff/60000)%60;
-  const s = Math.floor(diff/1000)%60;
+    const upcoming = list
+      .map(g => ({...g, _dt: parseGameToDate(g)}))
+      .filter(g => g._dt && g._dt.getTime() > now.getTime())
+      .sort((a,b)=>a._dt-b._dt)[0];
 
-  contadorEl.textContent =
-    `⏳ Próximo jogo em ${d}d ${h}h ${m}m ${s}s`;
-}
+    return upcoming || null;
+  }
+  function startCountdown() {
+    if(!contadorTxt) return;
+    function tick() {
+      const ng = getNextGame();
+      if(!ng) { contadorTxt.textContent = "—"; return; }
+      const now = new Date();
+      const diff = ng._dt ? (ng._dt - now) : (parseGameToDate(ng) - now);
+      const total = Math.max(0, diff);
+      const d = Math.floor(total/86400000);
+      const h = Math.floor(total/3600000) % 24;
+      const m = Math.floor(total/60000) % 60;
+      const s = Math.floor(total/1000) % 60;
+      const hh = String(h).padStart(2,"0");
+      const mm = String(m).padStart(2,"0");
+      const ss = String(s).padStart(2,"0");
+      contadorTxt.textContent = `${ng.label} • ${ng.dateISO.split("-").reverse().join("/")} ${ng.timeHHMM||""} • em ${d}d ${hh}:${mm}:${ss}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
 
-document.getElementById("prev").onclick=()=>{
-  dataAtual.setMonth(dataAtual.getMonth()-1);
-  render();
-};
-document.getElementById("next").onclick=()=>{
-  dataAtual.setMonth(dataAtual.getMonth()+1);
-  render();
-};
+  // ===== ICS Import (opcional) =====
+  function parseICS(text) {
+    const lines = text.replace(/\r/g,"").split("\n");
+    const unfolded = [];
+    for(const line of lines) {
+      if(line.startsWith(" ") || line.startsWith("\t")) unfolded[unfolded.length-1] += line.trim();
+      else unfolded.push(line.trim());
+    }
 
-render();
-setInterval(atualizarContador,1000);
-atualizarContador();
+    const evs = [];
+    let cur = null;
 
-});
+    function toLocalBrasilia(dtstr) {
+      if(!dtstr) return null;
+      const isUTC = dtstr.endsWith("Z");
+      const clean = dtstr.replace("Z","");
+      if(clean.length===8) {
+        const y=clean.slice(0,4), mo=clean.slice(4,6), da=clean.slice(6,8);
+        return {dateISO:`${y}-${mo}-${da}`, timeHHMM:""};
+      }
+      const y=clean.slice(0,4), mo=clean.slice(4,6), da=clean.slice(6,8);
+      const hh=clean.slice(9,11), mm=clean.slice(11,13), ss=clean.slice(13,15) || "00";
+      const iso = `${y}-${mo}-${da}T${hh}:${mm}:${ss}` + (isUTC ? "Z" : "-03:00");
+      const d = new Date(iso);
+
+      let local = d;
+      if(isUTC) local = new Date(d.getTime() - 3*60*60*1000);
+
+      const dateISO = local.getFullYear()+"-"+pad2(local.getMonth()+1)+"-"+pad2(local.getDate());
+      const timeHHMM = pad2(local.getHours())+":"+pad2(local.getMinutes());
+      return {dateISO, timeHHMM};
+    }
+
+    for(const ln of unfolded) {
+      if(ln==="BEGIN:VEVENT") cur = {};
+      else if(ln==="END:VEVENT") {
+        if(cur && cur.dtstart && cur.summary) {
+          const conv = toLocalBrasilia(cur.dtstart);
+          if(conv) {
+            const label = (cur.summary||"").replace(/\s+/g," ").trim();
+            evs.push({dateISO:conv.dateISO, label, timeHHMM:conv.timeHHMM, rawSummary:cur.summary});
+          }
+        }
+        cur=null;
+      } else if(cur) {
+        if(ln.startsWith("DTSTART")) cur.dtstart = ln.split(":").slice(1).join(":");
+        else if(ln.startsWith("SUMMARY")) cur.summary = ln.split(":").slice(1).join(":");
+      }
+    }
+    return evs;
+  }
+
+  function handleICS(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result||"");
+        const evs = parseICS(text);
+        if(evs.length===0) { warn("Não consegui ler eventos do .ICS. Confere se é um calendário válido."); return; }
+        importedGames = fixedGames.concat(evs);
+        if(statusEl) {
+          statusEl.classList.remove("warn");
+          statusEl.textContent = `✅ .ICS importado: +${evs.length} jogos (além dos jogos do Brasil já fixos)`;
+        }
+        repaint();
+      } catch(err) {
+        console.error(err);
+        warn("Falha ao importar .ICS: " + (err && err.message ? err.message : "erro"));
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  on("importBtn","click",()=>document.getElementById("icsFile")?.click());
+  on("icsFile","change",(e)=>{
+    const f = e.target.files && e.target.files[0];
+    if(f) handleICS(f);
+    e.target.value = "";
+  });
+
+  // ===== Render Calendar (com destaque e filtro) =====
+  function fillSelectors() {
+    monthSel.innerHTML = "";
+    MONTHS.forEach((nm,i)=>{
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = nm;
+      monthSel.appendChild(opt);
+    });
+
+    yearSel.innerHTML = "";
+    for(let y=2025;y<=2027;y++) {
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.textContent = String(y);
+      yearSel.appendChild(opt);
+    }
+  }
+
+  function renderCalendarWithView(y,m) {
+    const byDayAll = buildDayMap();
+    titleEl.textContent = fmtTitle(y,m);
+    gridEl.innerHTML = "";
+
+    const first = new Date(y, m, 1);
+    const startDow = first.getDay();
+    const last = new Date(y, m+1, 0);
+    const daysInMonth = last.getDate();
+    const prevLast = new Date(y, m, 0);
+    const prevDays = prevLast.getDate();
+
+    const nextGame = getNextGame();
+    const nextGameISO = nextGame ? nextGame.dateISO : null;
+
+    for(let i=0;i<42;i++) {
+      const cell = document.createElement("div");
+      cell.className = "day";
+      let dayNum, cellMonth=m, cellYear=y, muted=false;
+
+      if(i < startDow) {
+        dayNum = prevDays - (startDow - 1 - i);
+        muted = true;
+        const d = new Date(y, m-1, dayNum);
+        cellMonth = d.getMonth();
+        cellYear  = d.getFullYear();
+      } else if(i >= startDow + daysInMonth) {
+        dayNum = i - (startDow + daysInMonth) + 1;
+        muted = true;
+        const d = new Date(y, m+1, dayNum);
+        cellMonth = d.getMonth();
+        cellYear  = d.getFullYear();
+      } else {
+        dayNum = i - startDow + 1;
+      }
+
+      if(muted) cell.classList.add("muted");
+
+      const d = new Date(cellYear, cellMonth, dayNum);
+      const iso = isoDate(d);
+      cell.dataset.date = iso;
+
+      const num = document.createElement("div");
+      num.className = "num";
+      num.textContent = pad2(dayNum);
+      cell.appendChild(num);
+
+      const dayEventsAll = byDayAll.get(iso) || [];
+      const dayEvents = filterByView(dayEventsAll);
+
+      if(dayEvents.length) {
+        const chips = document.createElement("div");
+        chips.className = "chips";
+        const toShow = dayEvents.slice(0,4);
+        for(const ev of toShow) {
+          const div = document.createElement("div");
+          div.className = "chip " + chipClass(ev.type);
+          div.innerHTML = `<span class="t">${chipTitle(ev.type)}:</span>${ev.name}`;
+          chips.appendChild(div);
+        }
+        if(dayEvents.length > 4) {
+          const more = document.createElement("div");
+          more.className = "chip";
+          more.textContent = `+${dayEvents.length-4} mais…`;
+          chips.appendChild(more);
+        }
+        cell.appendChild(chips);
+      }
+
+      const hasGame = dayEventsAll.some(e => e.type==="jogo");
+      if(hasGame) cell.classList.add("has-game");
+      if(nextGameISO && iso === nextGameISO) cell.classList.add("is-next");
+
+      cell.addEventListener("click", () => openModal(iso, filterByView(dayEventsAll)));
+      gridEl.appendChild(cell);
+    }
+  }
+
+  function repaint() {
+    const y = parseInt(yearSel.value,10);
+    const m = parseInt(monthSel.value,10);
+    renderCalendarWithView(y,m);
+  }
+
+  on("prev","click",()=>{ 
+    let y=parseInt(yearSel.value,10), m=parseInt(monthSel.value,10);
+    m--; if(m<0){m=11;y--;}
+    yearSel.value=String(y); monthSel.value=String(m); repaint();
+  });
+  on("next","click",()=>{ 
+    let y=parseInt(yearSel.value,10), m=parseInt(monthSel.value,10);
+    m++; if(m>11){m=0;y++;}
+    yearSel.value=String(y); monthSel.value=String(m); repaint();
+  });
+  on("today","click",()=>{
+    const now = new Date();
+    yearSel.value=String(now.getFullYear());
+    monthSel.value=String(now.getMonth());
+    repaint();
+  });
+  if(monthSel) monthSel.addEventListener("change", repaint);
+  if(yearSel) yearSel.addEventListener("change", repaint);
+
+  // ===== Init =====
+  function init() {
+    fillSelectors();
+    const now = new Date();
+    yearSel.value = "2026";
+    monthSel.value = String(now.getMonth());
+
+    if(statusEl) statusEl.textContent = "Jogos do Brasil já cadastrados (junho/julho). Opcional: importe um .ICS para adicionar mais jogos.";
+    repaint();
+    startCountdown();
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
 </script>
-
 </body>
 </html>
