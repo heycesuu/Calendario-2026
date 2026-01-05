@@ -127,6 +127,38 @@ button:hover{background:#1c2f55}
 .jogo{background:rgba(77,214,255,.15);color:var(--jogo)}
 
 .today{outline:2px solid var(--jogo)}
+
+  <style>
+  /* … todos os seus estilos existentes … */
+
+  /* ===== LEGENDA ===== */
+  .legend{
+    display:flex;
+    gap:14px;
+    align-items:center;
+    margin-left:auto;
+    color:var(--muted);
+    font-weight:600;
+    font-size:14px;
+  }
+
+  .legend span{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+
+  .dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    display:inline-block;
+  }
+
+  .dot.fer{ background:var(--feriado); }
+  .dot.eme{ background:var(--ponto); }
+  .dot.jog{ background:var(--jogo); }
+  
 </style>
 </head>
 
@@ -147,7 +179,14 @@ button:hover{background:#1c2f55}
   </div>
 
   <div class="calendar">
-    <div class="cal-head" id="mesTitulo"></div>
+    <div class="cal-head" id="mesTitulo"></div> 
+
+     <div class="legend">
+    <span><i class="dot fer"></i> Feriado</span>
+    <span><i class="dot eme"></i> Emenda / Ponto facultativo</span>
+    <span><i class="dot jog"></i> Jogo</span>
+  </div>
+</div>
 
     <div class="week">
       <div>domingo</div><div>segunda</div><div>terça</div>
