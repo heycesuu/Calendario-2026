@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Calendário de Feriados e Jogos</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#121826; --txt:#e6eefc; --muted:#9fb0c8; --line:#22314a;
+      --header:#0f2d6f; --header2:#1b4db0;
+      --cell:#0e1522; --cell2:#0c1220;
+      --feriado:#ff6b6b; --ponto:#ffd166; --emenda:#b388ff; --jogo:#4dd6ff;
+      --chipbg:#0a0f1c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);}
+    header{max-width:1100px;margin:0 auto;padding:20px 16px 10px;}
+    h1{margin:0 0 6px;font-size:22px}
+    p{margin:6px 0;color:var(--muted);line-height:1.45}
+
+    .wrap{max-width:1100px;margin:0 auto;padding:0 16px 26px;display:grid;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .topbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    select,button,input{
+      background:#0e1522;border:1px solid var(--line);color:var(--txt);
+      padding:10px 10px;border-radius:10px;outline:none;
+    }
+    button{cursor:pointer}
+    button.primary{background:#16233a}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12px}
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
+    .gridWrap{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    .monthHeader{
+      background:linear-gradient(90deg,var(--header),var(--header2));
+      padding:14px 12px; text-align:center; font-weight:800; letter-spacing:.3px;
+      text-transform:lowercase; font-size:26px;
+    }
+    .dow{display:grid;grid-template-columns:repeat(7,1fr);background:#0f1c33;border-top:1px solid rgba(255,255,255,.06)}
+    .dow div{padding:10px 8px;text-align:center;font-weight:700;border-right:1px solid rgba(255,255,255,.06)}
+    .dow div:last-child{border-right:0}
+    .cal{display:grid;grid-template-columns:repeat(7,1fr);background:var(--cell2)}
+    .day{
+      min-height:130px; padding:8px; border-top:1px solid rgba(255,255,255,.06);
+      border-right:1px solid rgba(255,255,255,.06); background:var(--cell);
+      position:relative;
+    }
+    .day:nth-child(7n){border-right:0}
+    .day.muted{opacity:.45; background:#0a1020}
+    .num{font-weight:800;font-size:14px}
+    .chips{margin-top:6px;display:flex;flex-direction:column;gap:6px}
+    .chip{
+      background:var(--chipbg);border:1px solid var(--line);border-radius:10px;
+      padding:6px 8px;font-size:12px;line-height:1.25;
+    }
+    .chip strong{font-weight:750}
+    .chip.feriado{border-left:4px solid var(--feriado)}
+    .chip.ponto{border-left:4px solid var(--ponto)}
+    .chip.emenda{border-left:4px solid var(--emenda)}
+    .chip.jogo{border-left:4px solid var(--jogo)}
+    .footerNote{color:var(--muted);font-size:12px;margin-top:10px}
+
+    /* Modal */
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:999}
+    .modal{max-width:720px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .modalTop{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .modalTop h3{margin:0;font-size:16px}
+    .close{background:#0e1522;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
+    .modalList{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+    .modalList .chip{font-size:13px}
+    .mini{font-size:12px;color:var(--muted)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .fileLabel{padding:8px 10px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
+  
+    /* Tabs */
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .tab{
+      background:#0e1522;border:1px solid var(--line);color:var(--txt);
+      padding:10px 12px;border-radius:999px;cursor:pointer;font-weight:750;
+      opacity:.85;
+    }
+    .tab.active{background:#16233a;opacity:1}
+    .subtabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .pill{
+      background:#0e1522;border:1px solid var(--line);color:var(--txt);
+      padding:8px 10px;border-radius:999px;cursor:pointer;font-weight:650;font-size:12px;
+      opacity:.85;
+    }
+    .pill.active{background:#16233a;opacity:1}
+
+  
+    /* Click safety (evita camada invisível travar cliques) */
+    header, .wrap, .card, .topbar, .controls, .row, .legend, .tabs, .subtabs { position: relative; z-index: 10; }
+    button, select, input { position: relative; z-index: 11; pointer-events: auto; }
+    .gridWrap { position: relative; z-index: 1; }
+    .modalBack { pointer-events: none; }
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🗓️ Calendário de Feriados e Jogos</h1>
+    <p>
+      Um calendário só (offline, arquivo único). Os <b>feriados</b> já vêm prontos.
+      Para aparecerem os <b>jogos da Copa</b> no dia certo, é só <b>importar um arquivo .ICS</b> com os jogos.
+      <span style="white-space:nowrap">Copa: <b>junho</b> e <b>julho</b>.</span>
+    </p>
+  </header>
+
+  <div class="wrap">
+    <section class="card">
+      <div class="topbar">
+        <div class="controls">
+          <button id="prev" title="Mês anterior" type="button">←</button>
+          <select id="month"></select>
+          <select id="year"></select>
+          <button id="next" title="Próximo mês" type="button">→</button>
+          <button class="primary" id="today" type="button">Ir para o mês atual</button>
+        </div>
+
+        <div class="legend">
+          <span><span class="dot" style="background:var(--feriado)"></span>Feriado</span>
+          <span><span class="dot" style="background:var(--ponto)"></span>Ponto facultativo</span>
+          <span><span class="dot" style="background:var(--emenda)"></span>Emenda</span>
+          <span><span class="dot" style="background:var(--jogo)"></span>Jogo</span>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      
+      <div class="row">
+        <input type="file" id="icsFile" accept=".ics,text/calendar" style="display:none" />
+        <button class="primary" id="importBtn" type="button">Importar jogos (.ICS)</button>
+
+        <div class="tabs" aria-label="Abas">
+          <button class="tab active" id="tabAll" type="button">Tudo</button>
+          <button class="tab" id="tabGames" type="button">Jogos</button>
+          <button class="tab" id="tabHolidays" type="button">Feriados</button>
+        </div>
+
+        <div class="subtabs" id="gamesSubtabs" style="display:none">
+          <button class="pill active" id="pillAllGames" type="button">Todos os jogos</button>
+          <button class="pill" id="pillBrasil" type="button">Só Brasil</button>
+        </div>
+
+        <span class="fileLabel" id="fileStatus">Jogos do Brasil já carregados (junho/julho). Você pode importar um .ICS para atualizar.</span>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+<div class="row" style="margin-top:8px">
+        <span class="mini">Filtro “Só Brasil” procura por <b>Brazil</b> ou <b>Brasil</b> no nome do jogo.</span>
+        <span class="mini">Horário: se o .ics vier em UTC (Z), converto para <b>Brasília (UTC−3)</b>.</span>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="gridWrap">
+        <div class="monthHeader" id="monthTitle">janeiro de 2026</div>
+        <div class="dow">
+          <div>domingo</div><div>segunda-feira</div><div>terça-feira</div>
+          <div>quarta-feira</div><div>quinta-feira</div><div>sexta-feira</div><div>sábado</div>
+        </div>
+        <div class="cal" id="calendarGrid"></div>
+      </div>
+
+      <div class="footerNote">
+        Dica: dá pra adicionar feriados estaduais/municipais depois, se você quiser.
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal -->
+  <div class="modalBack" id="modalBack">
+    <div class="modal">
+      <div class="modalTop">
+        <h3 id="modalTitle">Detalhes</h3>
+        <button class="close" id="modalClose" type="button">Fechar</button>
+      </div>
+      <div class="modalList" id="modalList"></div>
+    </div>
+  </div>
+
+  <script>
+
+    // Se algo der errado no JS, mostra aviso no topo (sem travar a página)
+    window.addEventListener("error", (e)=>{
+      try{
+        const fs = document.getElementById("fileStatus");
+        if(fs) fs.textContent = "⚠️ Erro no script: " + (e && e.message ? e.message : "ver console");
+      }catch(_){}
+    });
+
+    // ===== Base: feriados nacionais + pontos facultativos (federal) =====
+    const eventos = [
+      { date: "2026-01-01", name: "Confraternização Universal", type: "feriado" },
+
+      { date: "2026-02-16", name: "Carnaval", type: "ponto" },
+      { date: "2026-02-17", name: "Carnaval", type: "ponto" },
+      { date: "2026-02-18", name: "Quarta-feira de Cinzas (até 14h)", type: "ponto" },
+
+      { date: "2026-04-03", name: "Paixão de Cristo", type: "feriado" },
+      { date: "2026-04-20", name: "Ponto facultativo", type: "ponto" },
+      { date: "2026-04-21", name: "Tiradentes", type: "feriado" },
+
+      { date: "2026-05-01", name: "Dia do Trabalho", type: "feriado" },
+
+      { date: "2026-06-04", name: "Corpus Christi", type: "ponto" },
+      { date: "2026-06-05", name: "Ponto facultativo", type: "ponto" },
+
+      { date: "2026-09-07", name: "Independência do Brasil", type: "feriado" },
+
+      { date: "2026-10-12", name: "Nossa Senhora Aparecida", type: "feriado" },
+      { date: "2026-10-28", name: "Dia do Servidor Público federal", type: "ponto" },
+
+      { date: "2026-11-02", name: "Finados", type: "feriado" },
+      { date: "2026-11-15", name: "Proclamação da República", type: "feriado" },
+      { date: "2026-11-20", name: "Dia da Consciência Negra", type: "feriado" },
+
+      { date: "2026-12-24", name: "Véspera de Natal (após 13h)", type: "ponto" },
+      { date: "2026-12-25", name: "Natal", type: "feriado" },
+      { date: "2026-12-31", name: "Véspera de Ano Novo (após 13h)", type: "ponto" },
+    ];
+
+    // ===== Helpers =====
+    function iso(d){ return d.toISOString().slice(0,10); }
+    function toDate(isoStr){ const [y,m,d]=isoStr.split("-").map(Number); return new Date(y,m-1,d); }
+
+    // ===== Emendas sugeridas =====
+    const pontos = new Set(eventos.filter(e=>e.type==="ponto").map(e=>e.date));
+    const emendas = [];
+    for(const f of eventos.filter(e=>e.type==="feriado")){
+      const d = toDate(f.date);
+      const wd = d.getDay(); // 0 dom .. 6 sáb
+      if(wd===2){ // terça -> segunda
+        const mon = new Date(d); mon.setDate(d.getDate()-1);
+        const monISO = iso(mon);
+        if(!pontos.has(monISO)){
+          emendas.push({date: monISO, name: `Emenda sugerida (véspera de ${f.name})`, type:"emenda"});
+        }
+      }
+      if(wd===4){ // quinta -> sexta
+        const fri = new Date(d); fri.setDate(d.getDate()+1);
+        const friISO = iso(fri);
+        if(!pontos.has(friISO)){
+          emendas.push({date: friISO, name: `Emenda sugerida (pós ${f.name})`, type:"emenda"});
+        }
+      }
+    }
+
+    // ===== Jogos (vindos do .ICS) =====
+    let importedGames = []; // {dateISO, label, timeHHMM, rawSummary}
+
+    // ===== Jogos pré-carregados (Brasil) — você pode atualizar depois importando um .ICS =====
+    const fixedGames = [
+      // Formato: {dateISO:"YYYY-MM-DD", label:"Brazil x Morocco", timeHHMM:"18:00", rawSummary:"Brazil - Morocco"}
+      {dateISO:"2026-06-13", label:"Brazil x Morocco",   timeHHMM:"18:00", rawSummary:"Brazil - Morocco"},
+      {dateISO:"2026-06-19", label:"Brazil x Haiti",     timeHHMM:"21:00", rawSummary:"Brazil - Haiti"},
+      {dateISO:"2026-06-24", label:"Scotland x Brazil",  timeHHMM:"18:00", rawSummary:"Scotland - Brazil"},
+      // Se o Brasil passar de fase, a gente atualiza aqui ou você importa um .ICS novo
+    ];
+
+    // Inicializa com os jogos fixos
+    importedGames = fixedGames.slice();
+
+    let gamesMode = "brasil"; // hide | all | brasil
+    let viewMode  = "all";  // all | games | holidays
+
+
+    // ===== Mapa por dia (eventos fixos) =====
+    function chipClass(t){ return t==="feriado"?"feriado":(t==="ponto"?"ponto":(t==="emenda"?"emenda":"jogo")); }
+    function chipTitle(t){ return t==="feriado"?"Feriado":(t==="ponto"?"Ponto facultativo":(t==="emenda"?"Emenda":"Jogo")); }
+
+    function buildDayMap(){
+      const byDay = new Map();
+
+      // Base (feriados + pontos + emendas)
+      const base = [...eventos, ...emendas];
+
+      // Decide o que entra conforme a aba
+      const includeHolidays = (viewMode === "all" || viewMode === "holidays");
+      const includeGames    = (viewMode === "all" || viewMode === "games") && (gamesMode !== "hide");
+
+      if(includeHolidays){
+        for(const e of base){
+          if(!byDay.has(e.date)) byDay.set(e.date, []);
+          byDay.get(e.date).push(e);
+        }
+      }
+
+      if(includeGames){
+        const list = importedGames.filter(g => {
+          if(gamesMode==="all") return true;
+          const s = (g.rawSummary||"").toLowerCase();
+          return s.includes("brazil") || s.includes("brasil");
+        });
+
+        for(const g of list){
+          if(!byDay.has(g.dateISO)) byDay.set(g.dateISO, []);
+          byDay.get(g.dateISO).push({date:g.dateISO, name:`${g.label}${g.timeHHMM ? " " + g.timeHHMM : ""}`, type:"jogo"});
+        }
+      }
+
+      // ordena: feriado > ponto > emenda > jogo
+      for(const [k,v] of byDay.entries()){
+        const rank = (t)=> t==="feriado"?0 : t==="ponto"?1 : t==="emenda"?2 : 3;
+        v.sort((a,b)=> rank(a.type)-rank(b.type));
+      }
+      return byDay;
+    }
+
+    // ===== UI de calendário =====
+    const monthSel = document.getElementById("month");
+    const yearSel = document.getElementById("year");
+    const titleEl = document.getElementById("monthTitle");
+    const gridEl  = document.getElementById("calendarGrid");
+
+    const monthNames = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+
+    for(let m=0;m<12;m++){
+      const opt=document.createElement("option");
+      opt.value=String(m);
+      opt.textContent=monthNames[m].replace(/^\\w/,c=>c.toUpperCase());
+      monthSel.appendChild(opt);
+    }
+    // ano fixo 2026
+    {
+      const opt=document.createElement("option");
+      opt.value="2026";
+      opt.textContent="2026";
+      yearSel.appendChild(opt);
+    }
+
+    const now = new Date();
+    let currentMonth = (now.getFullYear()===2026 ? now.getMonth() : 0);
+    let currentYear  = 2026;
+
+    function fmtTitle(y,m){ return `${monthNames[m]} de ${y}`; }
+
+    // Modal
+    const modalBack = document.getElementById("modalBack");
+    const modalClose = document.getElementById("modalClose");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalList  = document.getElementById("modalList");
+    function closeModal(){ modalBack.style.display="none"; modalBack.style.pointerEvents="none"; }
+    modalClose.addEventListener("click", closeModal);
+    modalBack.addEventListener("click", (ev)=>{ if(ev.target===modalBack) closeModal(); });
+
+    function openModal(y,m,dayNum, list){
+      const d = new Date(y,m,dayNum);
+      const dow = ["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"][d.getDay()];
+      modalTitle.textContent = `${dow}, ${String(dayNum).padStart(2,"0")}/${String(m+1).padStart(2,"0")}/${y}`;
+      modalList.innerHTML = "";
+      if(!list.length){
+        const none=document.createElement("div");
+        none.className="chip";
+        none.textContent="Sem eventos nesse dia.";
+        modalList.appendChild(none);
+      }else{
+        for(const e of list){
+          const div=document.createElement("div");
+          div.className=`chip ${chipClass(e.type)}`;
+          div.innerHTML = `<strong>${chipTitle(e.type)}:</strong> ${e.name}`;
+          modalList.appendChild(div);
+        }
+      }
+      modalBack.style.display="flex"; modalBack.style.pointerEvents="auto";
+    }
+
+    function renderCalendar(y,m){
+      const byDay = buildDayMap();
+
+      monthSel.value = String(m);
+      yearSel.value  = String(y);
+      titleEl.textContent = fmtTitle(y,m);
+      gridEl.innerHTML = "";
+
+      const first = new Date(y,m,1);
+      const startDow = first.getDay(); // 0 domingo
+      const last = new Date(y,m+1,0);
+      const daysInMonth = last.getDate();
+      const prevLast = new Date(y,m,0);
+      const prevDays = prevLast.getDate();
+
+      const totalCells = 42;
+      for(let i=0;i<totalCells;i++){
+        const cell = document.createElement("div");
+        cell.className = "day";
+
+        let dayNum, cellMonth=m, cellYear=y, muted=false;
+
+        if(i < startDow){
+          dayNum = prevDays - (startDow-1-i);
+          const d = new Date(y,m-1,dayNum);
+          cellYear = d.getFullYear(); cellMonth = d.getMonth();
+          muted = true;
+        }else if(i >= startDow + daysInMonth){
+          dayNum = i - (startDow + daysInMonth) + 1;
+          const d = new Date(y,m+1,dayNum);
+          cellYear = d.getFullYear(); cellMonth = d.getMonth();
+          muted = true;
+        }else{
+          dayNum = i - startDow + 1;
+        }
+
+        if(muted) cell.classList.add("muted");
+
+        const dateISO = iso(new Date(cellYear, cellMonth, dayNum));
+        cell.innerHTML = `<div class="num">${String(dayNum).padStart(2,"0")}</div><div class="chips"></div>`;
+        const chips = cell.querySelector(".chips");
+
+        const dayEvents = byDay.get(dateISO) || [];
+        for(const e of dayEvents.slice(0,4)){
+          const div = document.createElement("div");
+          div.className = `chip ${chipClass(e.type)}`;
+          div.innerHTML = `<strong>${chipTitle(e.type)}:</strong> ${e.name}`;
+          chips.appendChild(div);
+        }
+        if(dayEvents.length > 4){
+          const more = document.createElement("div");
+          more.className = "chip";
+          more.textContent = `+${dayEvents.length-4} mais…`;
+          chips.appendChild(more);
+        }
+
+        cell.addEventListener("click", () => openModal(cellYear, cellMonth, dayNum, dayEvents));
+        gridEl.appendChild(cell);
+      }
+    }
+
+    // Nav buttons
+    document.getElementById("prev").addEventListener("click", ()=>{
+      currentMonth = (currentMonth + 11) % 12;
+      renderCalendar(currentYear,currentMonth);
+    });
+    document.getElementById("next").addEventListener("click", ()=>{
+      currentMonth = (currentMonth + 1) % 12;
+      renderCalendar(currentYear,currentMonth);
+    });
+    document.getElementById("today").addEventListener("click", ()=>{
+      currentMonth = (now.getFullYear()===2026 ? now.getMonth() : 0);
+      renderCalendar(currentYear,currentMonth);
+    });
+    monthSel.addEventListener("change", ()=>{
+      currentMonth = Number(monthSel.value);
+      renderCalendar(currentYear,currentMonth);
+    });
+
+    // ===== Importar ICS (sem CORS, lendo arquivo local) =====
+    
+    
+    const icsFile = document.getElementById("icsFile");
+    const fileStatus = document.getElementById("fileStatus");
+    document.getElementById("importBtn").addEventListener("click", ()=> icsFile.click());
+
+    // Converte YYYYMMDDTHHMMSSZ ou YYYYMMDDTHHMMSS em Date
+    function parseICSTime(value){
+      // remove parâmetros tipo DTSTART;TZID=...
+      value = value.trim();
+      // YYYYMMDD or YYYYMMDDTHHMMSSZ
+      const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+      if(!m) return null;
+      const y=+m[1], mo=+m[2], d=+m[3];
+      if(!m[4]) return new Date(y,mo-1,d);
+      const hh=+m[4], mm=+m[5], ss=+m[6];
+      const isZ=!!m[7];
+      if(isZ){
+        // UTC
+        const utc = new Date(Date.UTC(y,mo-1,d,hh,mm,ss));
+        // converte para Brasília (UTC-3)
+        return new Date(utc.getTime() - 3*60*60*1000);
+      }
+      // "floating time" - assume local do PC
+      return new Date(y,mo-1,d,hh,mm,ss);
+    }
+
+    function normalizeSummary(s){
+      if(!s) return "";
+      // tenta formatar "Team A vs Team B" ou "Team A - Team B"
+      const clean = s.replace(/\s+/g," ").trim();
+      // troca " - " por " x "
+      if(clean.includes(" - ")) return clean.replace(" - "," x ");
+      if(clean.toLowerCase().includes(" vs ")) return clean.replace(/ vs /i," x ");
+      return clean;
+    }
+
+    function parseICS(text){
+      // desfaz line folding (linhas começando com espaço continuam a anterior)
+      text = text.replace(/\r\n/g,"\n").replace(/\n[ \t]/g,"");
+      const blocks = text.split("BEGIN:VEVENT").slice(1).map(b => b.split("END:VEVENT")[0]);
+      const games = [];
+      for(const b of blocks){
+        const dt = (b.match(/DTSTART[^:]*:([^\n]+)/) || [])[1];
+        const sum = (b.match(/SUMMARY:([^\n]+)/) || [])[1];
+        if(!dt || !sum) continue;
+        const d = parseICSTime(dt);
+        if(!d) continue;
+        const dateISO = iso(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+        const hh = String(d.getHours()).padStart(2,"0");
+        const mm = String(d.getMinutes()).padStart(2,"0");
+        const timeHHMM = (dt.includes("T") ? `${hh}:${mm}` : "");
+        const label = normalizeSummary(sum);
+        games.push({dateISO, label, timeHHMM, rawSummary: sum});
+      }
+      return games;
+    }
+
+    icsFile.addEventListener("change", async ()=>{
+      const file = icsFile.files && icsFile.files[0];
+      if(!file) return;
+      const text = await file.text();
+      importedGames = parseICS(text);
+      fileStatus.textContent = `Importado: ${file.name} (${importedGames.length} eventos)`;
+      // por padrão: mostrar todos após import
+      gamesMode = "all";
+      // pula automaticamente para o mês do primeiro jogo (Copa é junho/julho)
+      importedGames.sort((a,b)=> a.dateISO.localeCompare(b.dateISO));
+      if(importedGames.length){
+        const [yy,mm] = importedGames[0].dateISO.split("-").map(Number);
+        currentMonth = Math.max(0, Math.min(11, mm-1));
+      }
+      // se estiver na aba "Feriados", mantém sem jogos
+      if(viewMode !== "holidays") viewMode = "all";
+      // ativa UI da aba Tudo
+      tabAll.click();
+    });
+
+    // ===== Abas e filtros =====
+    const tabAll = document.getElementById("tabAll");
+    const tabGames = document.getElementById("tabGames");
+    const tabHolidays = document.getElementById("tabHolidays");
+    const gamesSubtabs = document.getElementById("gamesSubtabs");
+    const pillAllGames = document.getElementById("pillAllGames");
+    const pillBrasil = document.getElementById("pillBrasil");
+
+    function setActive(el, group){
+      for(const b of group) b.classList.remove("active");
+      el.classList.add("active");
+    }
+
+    function applyView(){
+      // mostra/oculta subtabs dos jogos
+      gamesSubtabs.style.display = (viewMode === "games" || viewMode === "all") ? "flex" : "none";
+
+      // gamesMode só faz sentido se houver import
+      if(importedGames.length === 0){
+        gamesMode = "hide";
+      }else{
+        // mantém o filtro atual
+        if(gamesMode === "hide") gamesMode = "all";
+      }
+      renderCalendar(currentYear,currentMonth);
+    }
+
+    tabAll.addEventListener("click", ()=>{
+      viewMode = "all";
+      setActive(tabAll,[tabAll,tabGames,tabHolidays]);
+      applyView();
+    });
+
+    tabGames.addEventListener("click", ()=>{
+      viewMode = "games";
+      setActive(tabGames,[tabAll,tabGames,tabHolidays]);
+      // se ainda não importou, chama import logo
+      if(importedGames.length === 0) document.getElementById("icsFile").click();
+      applyView();
+    });
+
+    tabHolidays.addEventListener("click", ()=>{
+      viewMode = "holidays";
+      setActive(tabHolidays,[tabAll,tabGames,tabHolidays]);
+      applyView();
+    });
+
+    pillAllGames.addEventListener("click", ()=>{
+      gamesMode = "all";
+      setActive(pillAllGames,[pillAllGames,pillBrasil]);
+      applyView();
+    });
+
+    pillBrasil.addEventListener("click", ()=>{
+      gamesMode = "brasil";
+      setActive(pillBrasil,[pillAllGames,pillBrasil]);
+      applyView();
+    });
+
+    // ===== Importar ICS (sem CORS, lendo arquivo local) =====
+
+    
+    
+    document.getElementById("importBtn").addEventListener("click", ()=> icsFile.click());
+
+    // Converte YYYYMMDDTHHMMSSZ ou YYYYMMDDTHHMMSS em Date
+    function parseICSTime(value){
+      // remove parâmetros tipo DTSTART;TZID=...
+      value = value.trim();
+      // YYYYMMDD or YYYYMMDDTHHMMSSZ
+      const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+      if(!m) return null;
+      const y=+m[1], mo=+m[2], d=+m[3];
+      if(!m[4]) return new Date(y,mo-1,d);
+      const hh=+m[4], mm=+m[5], ss=+m[6];
+      const isZ=!!m[7];
+      if(isZ){
+        // UTC
+        const utc = new Date(Date.UTC(y,mo-1,d,hh,mm,ss));
+        // converte para Brasília (UTC-3)
+        return new Date(utc.getTime() - 3*60*60*1000);
+      }
+      // "floating time" - assume local do PC
+      return new Date(y,mo-1,d,hh,mm,ss);
+    }
+
+    function normalizeSummary(s){
+      if(!s) return "";
+      // tenta formatar "Team A vs Team B" ou "Team A - Team B"
+      const clean = s.replace(/\s+/g," ").trim();
+      // troca " - " por " x "
+      if(clean.includes(" - ")) return clean.replace(" - "," x ");
+      if(clean.toLowerCase().includes(" vs ")) return clean.replace(/ vs /i," x ");
+      return clean;
+    }
+
+    function parseICS(text){
+      // desfaz line folding (linhas começando com espaço continuam a anterior)
+      text = text.replace(/\r\n/g,"\n").replace(/\n[ \t]/g,"");
+      const blocks = text.split("BEGIN:VEVENT").slice(1).map(b => b.split("END:VEVENT")[0]);
+      const games = [];
+      for(const b of blocks){
+        const dt = (b.match(/DTSTART[^:]*:([^\n]+)/) || [])[1];
+        const sum = (b.match(/SUMMARY:([^\n]+)/) || [])[1];
+        if(!dt || !sum) continue;
+        const d = parseICSTime(dt);
+        if(!d) continue;
+        const dateISO = iso(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+        const hh = String(d.getHours()).padStart(2,"0");
+        const mm = String(d.getMinutes()).padStart(2,"0");
+        const timeHHMM = (dt.includes("T") ? `${hh}:${mm}` : "");
+        const label = normalizeSummary(sum);
+        games.push({dateISO, label, timeHHMM, rawSummary: sum});
+      }
+      return games;
+    }
+
+    icsFile.addEventListener("change", async ()=>{
+      const file = icsFile.files && icsFile.files[0];
+      if(!file) return;
+      const text = await file.text();
+      importedGames = parseICS(text);
+      fileStatus.textContent = `Importado: ${file.name} (${importedGames.length} eventos)`;
+      // por padrão: mostrar todos após import
+      gamesMode = "all";
+      // pula automaticamente para o mês do primeiro jogo (Copa é junho/julho)
+      importedGames.sort((a,b)=> a.dateISO.localeCompare(b.dateISO));
+      if(importedGames.length){
+        const [yy,mm] = importedGames[0].dateISO.split("-").map(Number);
+        currentMonth = Math.max(0, Math.min(11, mm-1));
+      }
+      // se estiver na aba "Feriados", mantém sem jogos
+      if(viewMode !== "holidays") viewMode = "all";
+      // ativa UI da aba Tudo
+      tabAll.click();
+    });
+
+    // ===== Botões de filtro de jogos =====
+    document.getElementById("showAllGames").addEventListener("click", ()=>{
+      gamesMode = "all";
+      renderCalendar(currentYear,currentMonth);
+    });
+    document.getElementById("showBrasil").addEventListener("click", ()=>{
+      gamesMode = "brasil";
+      renderCalendar(currentYear,currentMonth);
+    });
+    document.getElementById("hideGames").addEventListener("click", ()=>{
+      gamesMode = "hide";
+      renderCalendar(currentYear,currentMonth);
+    });
+
+    // init
+    applyView();
+  </script>
+</body>
+</html>
